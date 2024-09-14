@@ -490,8 +490,9 @@ if __name__ == "__main__":
     parser.add_argument("--start_checkpoint", type=str, default = None)
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
-    
-    print("Optimizing " + args.model_path)
+
+    print(f"Source path: {args.source_path}")
+    print(f"model path: {args.model_path}")
 
     # Initialize system state (RNG)
     safe_state(args.quiet)
