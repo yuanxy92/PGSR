@@ -22,6 +22,7 @@ from pathlib import Path
 from plyfile import PlyData, PlyElement
 from utils.sh_utils import SH2RGB
 from scene.gaussian_model import BasicPointCloud
+from natsort import natsorted
 
 class CameraInfo(NamedTuple):
     uid: int
@@ -35,6 +36,7 @@ class CameraInfo(NamedTuple):
     height: int
     fx: float
     fy: float
+    depth: np.array
 
 class SceneInfo(NamedTuple):
     point_cloud: BasicPointCloud
@@ -80,7 +82,7 @@ def load_poses(pose_path, num):
     poses = np.stack(poses, axis=0)
     return poses
 
-def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
+def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder,load_depth=True):
     cam_infos = []
     for idx, key in enumerate(cam_extrinsics):
         sys.stdout.write('\r')
@@ -99,6 +101,7 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
 
         if intr.model=="SIMPLE_PINHOLE":
             focal_length_x = intr.params[0]
+            focal_length_y = focal_length_x
             FovY = focal2fov(focal_length_x, height)
             FovX = focal2fov(focal_length_x, width)
         elif intr.model=="PINHOLE":
@@ -112,9 +115,15 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
         image_path = os.path.join(images_folder, os.path.basename(extr.name))
         image_name = os.path.basename(image_path).split(".")[0]
 
+        depth = None
+        if load_depth:
+            depth_path = os.path.join(os.path.dirname(images_folder), 'depths', image_name+'.npy')
+            depth= np.load(depth_path)
+
+
         cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX,
                               image_path=image_path, image_name=image_name, 
-                              width=width, height=height, fx=focal_length_x, fy=focal_length_y)
+                              width=width, height=height, fx=focal_length_x, fy=focal_length_y,depth=depth)
         cam_infos.append(cam_info)
     sys.stdout.write('\n')
     return cam_infos
@@ -146,13 +155,13 @@ def storePly(path, xyz, rgb):
 
 def readColmapSceneInfo(path, images, eval, llffhold=8):
     try:
-        cameras_extrinsic_file = os.path.join(path, "sparse", "images.bin")
-        cameras_intrinsic_file = os.path.join(path, "sparse", "cameras.bin")
+        cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
+        cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
         cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file)
         cam_intrinsics = read_intrinsics_binary(cameras_intrinsic_file)
     except:
-        cameras_extrinsic_file = os.path.join(path, "sparse", "images.txt")
-        cameras_intrinsic_file = os.path.join(path, "sparse", "cameras.txt")
+        cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.txt")
+        cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.txt")
         cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file)
         cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
     reading_dir = "images" if images == None else images
@@ -169,24 +178,32 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
             train_list = meta["train"]
             test_list = meta["test"]
             print(f"train_list {len(train_list)}, test_list {len(test_list)}")
-
-    if train_list is not None:
-        train_cam_infos = [c for idx, c in enumerate(cam_infos) if c.image_name in train_list]
-        test_cam_infos = [c for idx, c in enumerate(cam_infos) if c.image_name in test_list]
-        print(f"train_cam_infos {len(train_cam_infos)}, test_cam_infos {len(test_cam_infos)}")
-    elif eval:
-        train_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold != 0]
-        test_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold == 0]
-    else:
+    if eval:
         train_cam_infos = cam_infos
-        test_cam_infos = []
+        test_cam_infos = natsorted(cam_infos, key=lambda x: x.image_name)
+        
+    else:
+        
+        train_cam_infos = cam_infos
+        test_cam_infos = natsorted(cam_infos, key=lambda x: x.image_name)
+
+    # if train_list is not None:
+    #     train_cam_infos = [c for idx, c in enumerate(cam_infos) if c.image_name in train_list]
+    #     test_cam_infos = [c for idx, c in enumerate(cam_infos) if c.image_name in test_list]
+    #     print(f"train_cam_infos {len(train_cam_infos)}, test_cam_infos {len(test_cam_infos)}")
+    # elif eval:
+    #     train_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold != 0]
+    #     test_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold == 0]
+    # else:
+    #     train_cam_infos = cam_infos
+    #     test_cam_infos = []
 
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
-    ply_path = os.path.join(path, "sparse/points3D.ply")
-    bin_path = os.path.join(path, "sparse/points3D.bin")
-    txt_path = os.path.join(path, "sparse/points3D.txt")
-    if not os.path.exists(ply_path) or True:
+    ply_path = os.path.join(path, "sparse/0/points3D.ply")
+    bin_path = os.path.join(path, "sparse/0/points3D.bin")
+    txt_path = os.path.join(path, "sparse/0/points3D.txt")
+    if not os.path.exists(ply_path):
         print("Converting point3d.bin to .ply, will happen only the first time you open the scene.")
         try:
             xyz, rgb, _ = read_points3D_binary(bin_path)

@@ -160,7 +160,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
         bg = torch.rand((3), device="cuda") if opt.random_background else background
         render_pkg = render(viewpoint_cam, gaussians, pipe, bg, app_model=app_model,
-                            return_plane=iteration>opt.single_view_weight_from_iter, return_depth_normal=iteration>opt.single_view_weight_from_iter)
+                            return_plane=True, return_depth_normal=iteration>opt.single_view_weight_from_iter)
         image, viewspace_point_tensor, visibility_filter, radii = \
             render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
         
@@ -173,7 +173,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             Ll1 = l1_loss(image, gt_image)
         image_loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * ssim_loss
         loss = image_loss.clone()
+
+        depth = render_pkg["plane_depth"]
+        gt_depth = viewpoint_cam.depth
         
+        depth = F.interpolate(depth[None], size=list(gt_depth.shape), mode='bilinear', align_corners=False)
+        depth = depth.squeeze()
+        l1_depth_loss = l1_loss(depth[gt_depth>0], viewpoint_cam.depth[gt_depth>0])*opt.lambda_l1_depth
+        loss += l1_depth_loss
         # scale loss
         if visibility_filter.sum() > 0:
             scale = gaussians.get_scaling[visibility_filter]
@@ -476,8 +483,8 @@ if __name__ == "__main__":
     parser.add_argument('--port', type=int, default=6007)
     parser.add_argument('--debug_from', type=int, default=-100)
     parser.add_argument('--detect_anomaly', action='store_true', default=False)
-    parser.add_argument("--test_iterations", nargs="+", type=int, default=[7_000, 30_000])
-    parser.add_argument("--save_iterations", nargs="+", type=int, default=[7_000, 30_000])
+    parser.add_argument("--test_iterations", nargs="+", type=int, default=[500, 1000, 2000, 3000])
+    parser.add_argument("--save_iterations", nargs="+", type=int, default=[500, 1000, 2000, 3000])
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[])
     parser.add_argument("--start_checkpoint", type=str, default = None)

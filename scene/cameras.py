@@ -32,13 +32,13 @@ def erode(bin_img, ksize=12):
 class Camera(nn.Module):
     def __init__(self, colmap_id, R, T, FoVx, FoVy,
                  image_width, image_height,
-                 image_path, image_name, uid,
+                 image_path, image_name, uid,depth,
                  trans=np.array([0.0, 0.0, 0.0]), scale=1.0, 
                  ncc_scale=1.0,
                  preload_img=True, data_device = "cuda"
                  ):
         super(Camera, self).__init__()
-
+        self.depth = depth
         self.uid = uid
         self.nearest_id = []
         self.nearest_names = []

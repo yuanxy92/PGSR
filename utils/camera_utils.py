@@ -13,6 +13,7 @@ from scene.cameras import Camera
 import numpy as np
 from utils.graphics_utils import fov2focal
 import sys
+import torch
 
 WARNED = False
 
@@ -37,7 +38,13 @@ def loadCam(args, id, cam_info, resolution_scale):
 
         scale = float(global_down) * float(resolution_scale)
         resolution = (int(orig_w / scale), int(orig_h / scale))
-
+    # ================================= Resize depth map ==========================================================
+    resized_depth = None
+    if cam_info.depth is not None:
+        # resized_depth = NP_resize(cam_info.depth, resolution)
+        resized_depth = torch.Tensor(cam_info.depth).cuda()
+        #resized_depth = torch.Tensor((resized_depth - resized_depth.min())/(resized_depth.max() - resized_depth.min())).cuda()
+    # =============================================================================================================
     sys.stdout.write('\r')
     sys.stdout.write("load camera {}".format(id))
     sys.stdout.flush()
@@ -46,7 +53,7 @@ def loadCam(args, id, cam_info, resolution_scale):
                   FoVx=cam_info.FovX, FoVy=cam_info.FovY,
                   image_width=resolution[0], image_height=resolution[1],
                   image_path=cam_info.image_path,
-                  image_name=cam_info.image_name, uid=id, 
+                  image_name=cam_info.image_name, uid=id, depth=resized_depth,
                   preload_img=args.preload_img, 
                   ncc_scale=args.ncc_scale,
                   data_device=args.data_device)
