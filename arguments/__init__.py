@@ -94,7 +94,8 @@ class OptimizationParams(ParamGroup):
         self.densify_grad_threshold = 0.0002
         
         self.single_view_weight = 0.015
-        self.single_view_weight_from_iter = 1000
+        # self.single_view_weight_from_iter = 1000
+        self.single_view_weight_from_iter = 0
 
         self.use_virtul_cam = False
         self.virtul_cam_prob = 0.5
@@ -115,6 +116,7 @@ class OptimizationParams(ParamGroup):
         self.random_background = False
 
         self.lambda_l1_depth = 0.05
+        self.normal_weight = 0.05
         super().__init__(parser, "Optimization Parameters")
     
     def init(self, parser):

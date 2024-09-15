@@ -25,7 +25,12 @@ def render_normal(viewpoint_cam, depth, offset=None, normal=None, scale=1):
     st = max(int(scale/2)-1,0)
     if offset is not None:
         offset = offset[st::scale,st::scale]
-    normal_ref = normal_from_depth_image(depth[st::scale,st::scale], 
+    # normal_ref = normal_from_depth_image(depth[st::scale,st::scale], 
+    #                                         intrinsic_matrix.to(depth.device), 
+    #                                         extrinsic_matrix.to(depth.device), offset)
+    st = max(int(1/2)-1,0)
+    #print(st)
+    normal_ref = normal_from_depth_image(depth, 
                                             intrinsic_matrix.to(depth.device), 
                                             extrinsic_matrix.to(depth.device), offset)
 

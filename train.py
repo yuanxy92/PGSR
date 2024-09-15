@@ -29,6 +29,7 @@ from argparse import ArgumentParser, Namespace
 from arguments import ModelParams, PipelineParams, OptimizationParams
 from scene.app_model import AppModel
 from scene.cameras import Camera
+from gaussian_renderer import render_normal
 try:
     from torch.utils.tensorboard import SummaryWriter
     TENSORBOARD_FOUND = True
@@ -209,7 +210,12 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             # smooth_distance_loss = 0.002 * (image_weight[None,1:-1,1:-1] * (distance_grad_x + distance_grad_y)).mean()
             # loss += (smooth_normal_loss)
             # loss += (smooth_distance_loss)
-
+        depth_normal_gt = render_normal(viewpoint_cam,gt_depth,scale=8)
+        depth_normal = F.interpolate(depth_normal[None], size=list(gt_depth.shape), mode='bilinear', align_corners=False).squeeze(0)
+        # print(depth_normal.shape)
+        # print(depth_normal_gt.shape)
+        normal_loss2 = ((depth_normal- depth_normal_gt).abs().sum(0))[gt_depth>0].mean() * opt.normal_weight
+        loss += (normal_loss2)
         # multi-view loss
         if iteration > opt.multi_view_weight_from_iter:
             nearest_cam = None if len(viewpoint_cam.nearest_id) == 0 else scene.getTrainCameras()[random.sample(viewpoint_cam.nearest_id,1)[0]]
@@ -250,24 +256,24 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 d_mask = d_mask & (pixel_noise < pixel_noise_th)
                 weights = (1.0 / torch.exp(pixel_noise)).detach()
                 weights[~d_mask] = 0
-                if iteration % 200 == 0:
-                    gt_img_show = ((gt_image).permute(1,2,0).clamp(0,1)[:,:,[2,1,0]]*255).detach().cpu().numpy().astype(np.uint8)
-                    if 'app_image' in render_pkg:
-                        img_show = ((render_pkg['app_image']).permute(1,2,0).clamp(0,1)[:,:,[2,1,0]]*255).detach().cpu().numpy().astype(np.uint8)
-                    else:
-                        img_show = ((image).permute(1,2,0).clamp(0,1)[:,:,[2,1,0]]*255).detach().cpu().numpy().astype(np.uint8)
-                    normal_show = (((normal+1.0)*0.5).permute(1,2,0).clamp(0,1)*255).detach().cpu().numpy().astype(np.uint8)
-                    depth_normal_show = (((depth_normal+1.0)*0.5).permute(1,2,0).clamp(0,1)*255).detach().cpu().numpy().astype(np.uint8)
-                    d_mask_show = (weights.float()*255).detach().cpu().numpy().astype(np.uint8).reshape(H,W)
-                    d_mask_show_color = cv2.applyColorMap(d_mask_show, cv2.COLORMAP_JET)
-                    depth = render_pkg['plane_depth'].squeeze().detach().cpu().numpy()
-                    depth_i = (depth - depth.min()) / (depth.max() - depth.min() + 1e-20)
-                    depth_i = (depth_i * 255).clip(0, 255).astype(np.uint8)
-                    depth_color = cv2.applyColorMap(depth_i, cv2.COLORMAP_JET)
-                    row0 = np.concatenate([gt_img_show, img_show, normal_show], axis=1)
-                    row1 = np.concatenate([d_mask_show_color, depth_color, depth_normal_show], axis=1)
-                    image_to_show = np.concatenate([row0, row1], axis=0)
-                    cv2.imwrite(os.path.join(debug_path, "%05d"%iteration + "_" + viewpoint_cam.image_name + ".jpg"), image_to_show)
+                # if iteration % 200 == 0:
+                #     gt_img_show = ((gt_image).permute(1,2,0).clamp(0,1)[:,:,[2,1,0]]*255).detach().cpu().numpy().astype(np.uint8)
+                #     if 'app_image' in render_pkg:
+                #         img_show = ((render_pkg['app_image']).permute(1,2,0).clamp(0,1)[:,:,[2,1,0]]*255).detach().cpu().numpy().astype(np.uint8)
+                #     else:
+                #         img_show = ((image).permute(1,2,0).clamp(0,1)[:,:,[2,1,0]]*255).detach().cpu().numpy().astype(np.uint8)
+                #     normal_show = (((normal+1.0)*0.5).permute(1,2,0).clamp(0,1)*255).detach().cpu().numpy().astype(np.uint8)
+                #     depth_normal_show = (((depth_normal+1.0)*0.5).permute(1,2,0).clamp(0,1)*255).detach().cpu().numpy().astype(np.uint8)
+                #     d_mask_show = (weights.float()*255).detach().cpu().numpy().astype(np.uint8).reshape(H,W)
+                #     d_mask_show_color = cv2.applyColorMap(d_mask_show, cv2.COLORMAP_JET)
+                #     depth = render_pkg['plane_depth'].squeeze().detach().cpu().numpy()
+                #     depth_i = (depth - depth.min()) / (depth.max() - depth.min() + 1e-20)
+                #     depth_i = (depth_i * 255).clip(0, 255).astype(np.uint8)
+                #     depth_color = cv2.applyColorMap(depth_i, cv2.COLORMAP_JET)
+                #     row0 = np.concatenate([gt_img_show, img_show, normal_show], axis=1)
+                #     row1 = np.concatenate([d_mask_show_color, depth_color, depth_normal_show], axis=1)
+                #     image_to_show = np.concatenate([row0, row1], axis=0)
+                #     cv2.imwrite(os.path.join(debug_path, "%05d"%iteration + "_" + viewpoint_cam.image_name + ".jpg"), image_to_show)
 
                 if d_mask.sum() > 0:
                     geo_loss = geo_weight * ((weights * pixel_noise)[d_mask]).mean()
