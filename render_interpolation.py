@@ -154,15 +154,9 @@ def clean_mesh(mesh, min_len=1000):
 
 def render_set(model_path, name, iteration, views, scene, gaussians, pipeline, background, 
                app_model=None, max_depth=5.0, volume=None, use_depth_filter=False):
-    gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt")
     render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders")
-    render_depth_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders_depth")
-    render_normal_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders_normal")
 
-    makedirs(gts_path, exist_ok=True)
     makedirs(render_path, exist_ok=True)
-    makedirs(render_depth_path, exist_ok=True)
-    makedirs(render_normal_path, exist_ok=True)
 
     depths_tsdf_fusion = []
     for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
@@ -190,6 +184,7 @@ def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParam
         # app_model.cuda()
 
         bg_color = [1,1,1] if dataset.white_background else [0, 0, 0]
+        bg_color = [1,1,1]
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
         print(f"TSDF voxel_size {voxel_size}")
         volume = o3d.pipelines.integration.ScalableTSDFVolume(
@@ -202,21 +197,6 @@ def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParam
         if not skip_train:
             render_set(dataset.model_path, "train", scene.loaded_iter, camera_trajectories, scene, gaussians, pipeline, background, 
                        max_depth=max_depth, volume=volume, use_depth_filter=use_depth_filter)
-            
-            # print(f"extract_triangle_mesh")
-            # mesh = volume.extract_triangle_mesh()
-
-            # path = os.path.join(dataset.model_path, "mesh", f"iteration_{iteration}")
-            # os.makedirs(path, exist_ok=True)
-            
-            # o3d.io.write_triangle_mesh(os.path.join(path, "tsdf_fusion.ply"), mesh, 
-            #                            write_triangle_uvs=True, write_vertex_colors=True, write_vertex_normals=True)
-            # mesh = clean_mesh(mesh)
-            # mesh.remove_unreferenced_vertices()
-            # mesh.remove_degenerate_triangles()
-            # o3d.io.write_triangle_mesh(os.path.join(path, "tsdf_fusion_post.ply"), mesh, 
-            #                            write_triangle_uvs=True, write_vertex_colors=True, write_vertex_normals=True)
-
         if not skip_test:
             render_set(dataset.model_path, "test", scene.loaded_iter, scene.getTestCameras(), scene, gaussians, pipeline, background)
 
