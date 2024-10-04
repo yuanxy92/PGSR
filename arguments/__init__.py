@@ -116,7 +116,8 @@ class OptimizationParams(ParamGroup):
         self.random_background = False
 
         self.lambda_l1_depth = 0.05
-        self.normal_weight = 0.1
+        self.normal_weight = 0.01
+        # self.normal_weight = 0.1
         super().__init__(parser, "Optimization Parameters")
     
     def init(self, parser):
