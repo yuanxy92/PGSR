@@ -14,6 +14,66 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from math import exp
 import numpy as np
+import math
+
+def compute_local_normal_consistency(normal, window_size=3):
+    """
+    计算局部区域的法线一致性，基于余弦相似性，窗口内法线变化越小表示区域越平。
+    normal: 3*H*W 的张量，表示每个像素的法线向量 (C=3,H,W)。
+    window_size: 局部窗口大小。
+    返回每个像素的局部法线一致性图 (H, W)。
+    """
+    # 将 normal 的形状从 (3, H, W) 转换为 (1, 3, H, W) 以便使用 unfold
+    normal = normal.unsqueeze(0)  # (1, 3, H, W)
+
+    # 创建一个展开操作的卷积核，用于计算局部窗口内的法线一致性
+    pad = window_size // 2
+
+    # 将 normal 展开为局部窗口
+    unfolded = F.unfold(normal, kernel_size=window_size, padding=pad)  # (1, 3*window_size*window_size, H*W)
+    
+    # 转换形状为 (H*W, 3, window_size*window_size)
+    unfolded = unfolded.view(3, window_size * window_size, -1).permute(2, 0, 1)  # (H*W, 3, window_size*window_size)
+    
+    # 计算每个窗口的平均法线向量
+    mean_normal = unfolded.mean(dim=-1)  # (H*W, 3)
+    
+    # 将展开的法线重新转为与 mean_normal 对应的形状 (H*W, 3, window_size*window_size)
+    unfolded = unfolded.permute(0, 2, 1)  # (H*W, window_size*window_size, 3)
+
+    # 计算局部窗口法线向量与平均法线的余弦相似度
+    cosine_similarity = F.cosine_similarity(unfolded, mean_normal.unsqueeze(1), dim=-1)  # (H*W, window_size*window_size)
+
+    # 计算相似度的均值，值越接近 1 表示法线越相似
+    consistency_map = cosine_similarity.mean(dim=-1)  # (H*W)
+
+    # 将 consistency_map 重新 reshape 回 (H, W)
+    consistency_map = consistency_map.view(normal.shape[2], normal.shape[3])  # (H, W)
+
+    return consistency_map
+
+def compute_local_normal_consistency_weight(normal, window_size=3):
+    """
+    计算局部区域的法线一致性权重，用作损失函数的权重，平坦区域的权重更大。
+    normal: 3*H*W 的张量，表示每个像素的法线向量 (C=3,H,W)。
+    window_size: 局部窗口大小。
+    alpha: 控制权重差异的系数，越大时平坦区域权重越大。
+    返回每个像素的局部法线一致性权重图 (H, W)。
+    """
+    # 计算法线余弦相似性
+    consistency_map = compute_local_normal_consistency(normal, window_size)
+
+    # 将 cos 范围从 [-1, 1] 变换到 [0, 1]
+    weights = (1 + consistency_map) / 2  # 范围 [0, 1]
+
+    # 对权重进行指数放大，alpha 控制权重的差异
+    #weights = weights.pow(alpha)
+
+    return weights
+
+def l1_weight_loss(network_output, gt, weight):
+    error = torch.abs((network_output - gt)) * weight
+    return error.mean()
 
 def l1_loss(network_output, gt):
     return torch.abs((network_output - gt)).mean()
@@ -139,3 +199,40 @@ def lncc(ref, nea):
     ncc = torch.mean(ncc, dim=1, keepdim=True)
     mask = (ncc < 0.9)
     return ncc, mask
+
+def pearson_depth_loss(depth_src, depth_target):
+    #co = pearson(depth_src.reshape(-1), depth_target.reshape(-1))
+    depth_src = depth_src[depth_target>0]
+    depth_target = depth_target[depth_target>0]
+    src = depth_src - depth_src.mean()
+    target = depth_target - depth_target.mean()
+
+
+    src = src / (src.std() + 1e-6)
+    target = target / (target.std() + 1e-6)
+
+    co = (src * target).mean()
+    assert not torch.any(torch.isnan(co))
+    return 1 - co
+
+
+def local_pearson_loss(depth_src, depth_target, box_p, p_corr):
+        # Randomly select patch, top left corner of the patch (x_0,y_0) has to be 0 <= x_0 <= max_h, 0 <= y_0 <= max_w
+        num_box_h = math.floor(depth_src.shape[0]/box_p)
+        num_box_w = math.floor(depth_src.shape[1]/box_p)
+        max_h = depth_src.shape[0] - box_p
+        max_w = depth_src.shape[1] - box_p
+        _loss = torch.tensor(0.0,device='cuda')
+        n_corr = int(p_corr * num_box_h * num_box_w)
+        x_0 = torch.randint(0, max_h, size=(n_corr,), device = 'cuda')
+        y_0 = torch.randint(0, max_w, size=(n_corr,), device = 'cuda')
+        x_1 = x_0 + box_p
+        y_1 = y_0 + box_p
+        _loss = torch.tensor(0.0,device='cuda')
+        valid_num = 0
+        for i in range(len(x_0)):
+            if depth_target[x_0[i]:x_1[i],y_0[i]:y_1[i]].reshape(-1).mean() == 0 or torch.count_nonzero(depth_target[x_0[i]:x_1[i],y_0[i]:y_1[i]])<(box_p*box_p)*0.6:
+                continue
+            _loss += pearson_depth_loss(depth_src[x_0[i]:x_1[i],y_0[i]:y_1[i]].reshape(-1), depth_target[x_0[i]:x_1[i],y_0[i]:y_1[i]].reshape(-1))
+            valid_num += 1
+        return _loss/valid_num
