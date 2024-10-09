@@ -62,8 +62,8 @@ def iterative_linear_fitting_bg(depth_A, depth_B, threshold_ratio=0.1, iteration
     :return: 线性拟合后的深度图 B 和误差
     """
     # 初始设置
-    depth_B[depth_B>1]=1
-    depth_A[depth_B>1]=1
+    # depth_B[depth_B>1]=1
+    # depth_A[depth_B>1]=1
     depth_A_flat = depth_A.flatten()
     depth_B_flat = depth_B.flatten()
     
@@ -213,30 +213,38 @@ def get_npy_files(directory):
     files = os.listdir(directory)
     # Filter the list to include only .npy files
     npy_files = [file for file in files if file.endswith('.npy')]
-    npy_base_files = os.path.basename(npy_files)
-    return npy_files, npy_base_files
+    return npy_files
+
+def normalized_depth8U(depth_image):
+    depth_image8U = depth_image / np.max(depth_image) * 255
+    return depth_image8U.astype(np.uint8)
 
 ## refine the dust3r depth map using boosting monocular depth
 def refine_dust3r_depth_maps(datadir):
     # generate monocular depth map using boosting monocular depth algorithm
     input_image_folder = os.path.join(datadir, 'colmap', 'images') 
     mono_depth_orig_folder = os.path.join(datadir, 'colmap', 'mono_depths_orig') 
-    prepare_gt_depth(input_folder = input_image_folder, save_folder = mono_depth_orig_folder)
+    if not os.path.isdir(mono_depth_orig_folder):
+        prepare_gt_depth(input_folder = input_image_folder, save_folder = mono_depth_orig_folder)
     # fitting the scale
     dust3r_depth_folder = os.path.join(datadir, 'colmap', 'depths')
-    filename_lists, basename_lists = get_npy_files(dust3r_depth_folder)
+    basename_lists = get_npy_files(dust3r_depth_folder)
     mono_depth_folder = os.path.join(datadir, 'colmap', 'mono_depths') 
-    os.makedirs(mono_depth_folder)
+    os.makedirs(mono_depth_folder, exist_ok=True)
     for basename in basename_lists:
         # fit depth scale
         depth_dust3r = np.load(os.path.join(dust3r_depth_folder, basename))
         depth_mono = np.load(os.path.join(mono_depth_orig_folder, basename))
         depth_fitscale = fit_depth_scale(depth_dust3r, depth_mono)
+        cv2.imwrite(os.path.join(mono_depth_orig_folder, f'{basename}.png'), normalized_depth8U(depth_mono))
+        cv2.imwrite(os.path.join(mono_depth_orig_folder, f'{basename}_fitscale.png'), normalized_depth8U(depth_fitscale))
         # guided filter
         depth_refine = depth_filter_refine(depth_dust3r, depth_fitscale, fitler_flag = 1)
         np.save(os.path.join(mono_depth_folder, basename), depth_refine)
+        # save visualization results
+        cv2.imwrite(os.path.join(mono_depth_folder, f'{basename}.png'), normalized_depth8U(depth_refine))
     
 if __name__ == "__main__":
-    datadir = '/home/luvision/project/Code/data/Aurora/Fig_4/Softgripper_demo/capture_20241008_1/011_recon'
+    datadir = '/home/luvision/project/Code/data/Aurora/Fig_4/Softgripper_demo/capture_20241004_4/020_recon'
     refine_dust3r_depth_maps(datadir)
 

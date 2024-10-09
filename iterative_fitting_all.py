@@ -60,8 +60,8 @@ def iterative_linear_fitting_bg(depth_A, depth_B, threshold_ratio=0.1, iteration
     :return: 线性拟合后的深度图 B 和误差
     """
     # 初始设置
-    depth_B[depth_B>1]=1
-    depth_A[depth_B>1]=1
+    # depth_B[depth_B>1]=1
+    # depth_A[depth_B>1]=1
     depth_A_flat = depth_A.flatten()
     depth_B_flat = depth_B.flatten()
     
