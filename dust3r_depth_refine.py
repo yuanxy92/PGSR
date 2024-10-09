@@ -245,6 +245,8 @@ def refine_dust3r_depth_maps(datadir):
         cv2.imwrite(os.path.join(mono_depth_folder, f'{basename}.png'), normalized_depth8U(depth_refine))
     
 if __name__ == "__main__":
-    datadir = '/home/luvision/project/Code/data/Aurora/Fig_4/Softgripper_demo/capture_20241004_4/020_recon'
+    # datadir = '/home/luvision/project/Code/data/Aurora/Fig_4/Softgripper_demo/capture_20241004_4/020_recon'
+    # refine_dust3r_depth_maps(datadir)
+    datadir = sys.argv[1]
     refine_dust3r_depth_maps(datadir)
 
