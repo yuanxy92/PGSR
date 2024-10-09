@@ -1,0 +1,4 @@
+inputs/
+outputs/
+.DS_Store
+pix2pix/checkpoints/
