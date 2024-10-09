@@ -2,7 +2,7 @@
 iterations1=3000
 iterations2=3000
 voxel_size=0.8
-for i in $(seq -w 020 020);
+for i in $(seq -w 020 024);
 do
     rootdir=/home/luvision/project/Code/data/Aurora/Fig_4/Softgripper_demo/capture_20241004_4/${i}_recon
     python dust3r_depth_refine.py ${rootdir}
@@ -17,5 +17,5 @@ do
         --multi_view_ncc_weight 0 \
         --multi_view_geo_weight 0.1
     python render.py -m ${rootdir}/pgsr_depth_normal \
-        --max_depth 300.0 --voxel_size 0.25 --iteration ${iterations1}
+        --max_depth 300.0 --voxel_size 0.5 --iteration ${iterations1}
 done

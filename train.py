@@ -130,7 +130,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     os.makedirs(debug_path, exist_ok=True)
 
     for iteration in range(first_iter, opt.iterations + 1):
-        train_img = [f'{i}' for i in range(0,5)]
+        # train_img = [f'{i}' for i in range(0,5)]
         iter_start.record()
         gaussians.update_learning_rate(iteration)
         # Every 1000 its we increase the levels of SH up to a maximum degree
@@ -398,11 +398,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                         if mask.sum() > 0:
                             ncc_loss = ncc_weight * ncc.mean()
                             loss += ncc_loss
-        if viewpoint_cam.image_name not in train_img:
-
-            loss *= 0.2
-            if opt.other_train_view>0:
-                loss += opt.other_train_view*image_loss
+        # if viewpoint_cam.image_name not in train_img:
+        #     # print('**************************************************************')
+        #     # print(viewpoint_cam.image_name)
+        #     # print(train_img)
+        #     # print('**************************************************************')
+        #     loss *= 0.2
+        #     if opt.other_train_view>0:
+        #         loss += opt.other_train_view*image_loss
         loss.backward()
         iter_end.record()
 
@@ -561,7 +564,7 @@ if __name__ == "__main__":
     parser.add_argument('--debug_from', type=int, default=-100)
     parser.add_argument('--detect_anomaly', action='store_true', default=False)
     parser.add_argument("--test_iterations", nargs="+", type=int, default=[7_000, 30_000])
-    parser.add_argument("--save_iterations", nargs="+", type=int, default=[7_000, 30_000])
+    parser.add_argument("--save_iterations", nargs="+", type=int, default=[500, 1000, 2000, 3000, 4000, 5000])
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[])
     parser.add_argument("--start_checkpoint", type=str, default = None)

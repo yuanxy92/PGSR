@@ -117,7 +117,10 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder,load_depth=T
 
         depth = None
         if load_depth:
-            depth_path = os.path.join(os.path.dirname(images_folder), 'depths', image_name+'.npy')
+            refine_depth_dir = os.path.join(os.path.dirname(images_folder), 'mono_depths')
+            if not os.path.isdir(refine_depth_dir):
+                refine_depth_dir = os.path.join(os.path.dirname(images_folder), 'depths')
+            depth_path = os.path.join(refine_depth_dir, image_name+'.npy')
             depth= np.load(depth_path)
 
 
