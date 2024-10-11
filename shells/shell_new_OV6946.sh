@@ -23,7 +23,7 @@ voxel_size=0.8
 
 for i in $(seq -w 101 101);
 do
-    rootdir=/home/luvision/project/Code/data/Aurora/Fig_4/Softgripper_demo/capture_20241009_2/${i}_recon
+    rootdir=/home/luvision/project/Code/data/Aurora/Fig_4/Softgripper_demo/capture_20241010_2/${i}_recon
     python dust3r_depth_refine.py ${rootdir}
     python train.py -s ${rootdir}/colmap \
         -m ${rootdir}/pgsr_depth_normal \
