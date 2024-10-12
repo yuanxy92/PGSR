@@ -34,8 +34,8 @@ do
         --multi_view_weight_from_iter 8000 \
         --iterations ${iterations1} \
         --multi_view_ncc_weight 0 \
-        --multi_view_geo_weight 0.1 \
-        -r2
+        --multi_view_geo_weight 0.1 
+
     python render.py -m ${rootdir}/pgsr_depth_normal \
         --max_depth 300.0 --voxel_size 0.5 --iteration ${iterations1}
 done
