@@ -170,11 +170,11 @@ def fuse_edge_depth(depth_guide,depth_mono, depth_bad):
     depth_fused = np.where(mask == 1, depth_mono, depth_bad)
     return depth_fused,mask
 
-def depth_filter_refine(input, reference, fitler_flag = 1):
+def depth_filter_refine(input, reference, fitler_flag = 1, radius = 25, ksize = 3):
     if fitler_flag>0:
         reference = reference.astype(np.float32)
-        reference =cv2.medianBlur(reference, 3)
-        reference =cv2.medianBlur(reference, 3)
+        reference =cv2.medianBlur(reference, ksize)
+        reference =cv2.medianBlur(reference, ksize)
     # The 1D image whose values we would like to filter
     target = input
     #target  =cv2.resize(target,(1536,768),interpolation=cv2.INTER_CUBIC)
@@ -184,27 +184,27 @@ def depth_filter_refine(input, reference, fitler_flag = 1):
     low_res_depth = copy.deepcopy(target)
     high_res_depth = reference
     # 生成权重图像（例如：基于图像梯度）
-    grad_x = cv2.Sobel(high_res_depth.astype(np.float32), cv2.CV_32F, 1, 0, ksize=3)
-    grad_y = cv2.Sobel(high_res_depth.astype(np.float32), cv2.CV_32F, 0, 1, ksize=3)
+    grad_x = cv2.Sobel(high_res_depth.astype(np.float32), cv2.CV_32F, 1, 0, ksize=ksize)
+    grad_y = cv2.Sobel(high_res_depth.astype(np.float32), cv2.CV_32F, 0, 1, ksize=ksize)
     gradient_magnitude = np.sqrt(grad_x ** 2 + grad_y ** 2)
     # 权重图像可以根据梯度幅值生成，来动态调整平滑效果
     weight = 1 / (1 + 50*gradient_magnitude)
     low_res_depth = low_res_depth.astype(np.float64)
     high_res_depth = high_res_depth.astype(np.float64)
     # 引导滤波的参数
-    radius = 25  # 滤波半径
+    # radius = 25  # 滤波半径
     eps = 1e-8  # 正则化参数，避免除以零
     # 使用高清图引导低清深度图进行滤波，增强细节(guide, input_img, r, eps, weight)
     enhanced_depth = weighted_guided_filter(high_res_depth, low_res_depth, radius, eps,weight)
     enhanced_depth = enhanced_depth.astype(np.float32)
     if fitler_flag>0:
-        enhanced_depth =cv2.medianBlur(enhanced_depth, 3)
+        enhanced_depth =cv2.medianBlur(enhanced_depth, ksize)
     #enhanced_depth2 = weighted_guided_filter(high_res_depth, low_res_depth, radius, eps,np.ones_like(weight))
     enhanced_depth,_ = fuse_edge_depth(enhanced_depth,high_res_depth,low_res_depth)
     enhanced_depth = weighted_guided_filter(high_res_depth, enhanced_depth, radius, 1e-8,weight)
     if fitler_flag>0:
         enhanced_depth = enhanced_depth.astype(np.float32)
-        enhanced_depth =cv2.medianBlur(enhanced_depth, 3)
+        enhanced_depth = cv2.medianBlur(enhanced_depth, ksize)
     enhanced_depth[mask] = 0
     return enhanced_depth
 
@@ -239,7 +239,8 @@ def refine_dust3r_depth_maps(datadir):
         cv2.imwrite(os.path.join(mono_depth_orig_folder, f'{basename}.png'), normalized_depth8U(depth_mono))
         cv2.imwrite(os.path.join(mono_depth_orig_folder, f'{basename}_fitscale.png'), normalized_depth8U(depth_fitscale))
         # guided filter
-        depth_refine = depth_filter_refine(depth_dust3r, depth_fitscale, fitler_flag = 1)
+        depth_refine = depth_filter_refine(depth_dust3r, depth_mono, fitler_flag = 1, radius = 25, ksize = 3)
+        # depth_refine = depth_filter_refine(depth_dust3r, depth_fitscale, fitler_flag = 1)
         np.save(os.path.join(mono_depth_folder, basename), depth_refine)
         # save visualization results
         cv2.imwrite(os.path.join(mono_depth_folder, f'{basename}.png'), normalized_depth8U(depth_refine))
