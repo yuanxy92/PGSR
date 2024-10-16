@@ -147,9 +147,10 @@ def render_set(model_path, name, iteration, views, scene, gaussians, pipeline, b
             
             pose = np.identity(4)
             pose[:3,:3] = view.R.transpose(-1,-2)
-            pose[:3, 3] = view.T*5
+            inner_scale = 1.0
+            pose[:3, 3] = view.T*inner_scale
             color = o3d.io.read_image(os.path.join(render_path, view.image_name + ".jpg"))
-            depth = o3d.geometry.Image((ref_depth*1000*5).astype(np.uint16))
+            depth = o3d.geometry.Image((ref_depth*1000*inner_scale).astype(np.uint16))
             rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(
                 color, depth, depth_scale=1000.0, depth_trunc=max_depth, convert_rgb_to_intensity=False)
             volume.integrate(
@@ -172,7 +173,8 @@ def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParam
         print(f"TSDF voxel_size {voxel_size}")
         volume = o3d.pipelines.integration.ScalableTSDFVolume(
         voxel_length=voxel_size,
-        sdf_trunc=4.0*voxel_size,
+        # sdf_trunc=4.0*voxel_size,
+        sdf_trunc=5.0*voxel_size,
         color_type=o3d.pipelines.integration.TSDFVolumeColorType.RGB8)
 
         if not skip_train:
