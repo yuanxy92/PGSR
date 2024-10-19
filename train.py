@@ -12,6 +12,9 @@
 import os
 from datetime import datetime
 import torch
+from torchvision import transforms
+import torch.nn.functional as F
+
 import random
 import numpy as np
 from random import randint
@@ -80,7 +83,7 @@ def gen_virtul_cam(cam, trans_noise=1.0, deg_noise=15.0):
                         preload_img=False, data_device = "cuda",depth=None,mono_depth=None)
     return virtul_cam
 
-def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint, debug_from):
+def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint, debug_from, normal_scale = 1.0):
     first_iter = 0
     tb_writer = prepare_output_and_logger(dataset)
     # backup main code
@@ -184,7 +187,18 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         #     #l1_depth_loss = l1_loss(depth[gt_depth2>0], viewpoint_cam.depth[gt_depth2>0])*opt.lambda_l1_depth
         #     l1_depth_loss = l1_weight_loss(depth[gt_depth2>0], viewpoint_cam.depth[gt_depth2>0],depth_weight[gt_depth2>0])*opt.lambda_l1_depth
         # else:
-        l1_depth_loss = l1_loss(depth[gt_depth2>0], viewpoint_cam.depth[gt_depth2>0])*opt.lambda_l1_depth
+        # print('***********************')
+        # print(gt_depth2.shape)
+        # print(depth.shape)
+        # print(viewpoint_cam.depth.shape)
+        # print('***********************')
+        if depth.shape[0] != gt_depth2.shape[0]:
+            depth = depth.unsqueeze(0).unsqueeze(0)
+            depth2 = transforms.functional.resize(depth, [gt_depth2.shape[0], gt_depth2.shape[1]])
+            depth2 = depth2.squeeze(0).squeeze(0)
+        else:
+            depth2 = depth
+        l1_depth_loss = l1_loss(depth2[gt_depth2>0], viewpoint_cam.depth[gt_depth2>0])*opt.lambda_l1_depth
 
         
         image_loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * ssim_loss
@@ -203,7 +217,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         #如果内参发生变化，normal渲染会受到影响！!!
         
         
-        scale = 1
+        scale = normal_scale
         
         #print(scale)
         
@@ -568,6 +582,7 @@ if __name__ == "__main__":
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[])
     parser.add_argument("--start_checkpoint", type=str, default = None)
+    parser.add_argument('--normal_scale', type=float, default=1.0)
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
     
@@ -579,7 +594,8 @@ if __name__ == "__main__":
     # Start GUI server, configure and run training
     # network_gui.init(args.ip, args.port)
     torch.autograd.set_detect_anomaly(args.detect_anomaly)
-    training(lp.extract(args), op.extract(args), pp.extract(args), args.test_iterations, args.save_iterations, args.checkpoint_iterations, args.start_checkpoint, args.debug_from)
+    training(lp.extract(args), op.extract(args), pp.extract(args), args.test_iterations, args.save_iterations, \
+             args.checkpoint_iterations, args.start_checkpoint, args.debug_from, args.normal_scale)
 
     # All done
     print("\nTraining complete.")

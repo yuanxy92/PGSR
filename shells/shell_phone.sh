@@ -19,32 +19,45 @@
 #     --max_depth 60.0 --voxel_size 0.025 --iteration 2000
 
 
+# python train.py -s /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/concave_recon/colmap \
+#     -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/concave_recon/pgsr_depth_normal \
+#     --max_abs_split_points 0 --opacity_cull_threshold 0.05 
+# python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/concave_recon/pgsr_depth_normal \
+#     --max_depth 60.0 --voxel_size 0.025 --iteration 1000
+# python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/concave_recon/pgsr_depth_normal \
+#     --max_depth 60.0 --voxel_size 0.025 --iteration 2000
+# python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/concave_recon/pgsr_depth_normal \
+#     --max_depth 60.0 --voxel_size 0.025 --iteration 3000
+
+# python train.py -s /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/convex_recon/colmap \
+#     -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/convex_recon/pgsr_depth_normal \
+#     --max_abs_split_points 0 --opacity_cull_threshold 0.05 
+# python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/convex_recon/pgsr_depth_normal \
+#     --max_depth 60.0 --voxel_size 0.025 --iteration 1000
+# python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/convex_recon/pgsr_depth_normal \
+#     --max_depth 60.0 --voxel_size 0.025 --iteration 2000
+# python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/convex_recon/pgsr_depth_normal \
+#     --max_depth 60.0 --voxel_size 0.025 --iteration 3000
+
+# python train.py -s /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/planar_recon/colmap \
+#     -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/planar_recon/pgsr_depth_normal \
+#     --max_abs_split_points 0 --opacity_cull_threshold 0.05 
+# python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/planar_recon/pgsr_depth_normal \
+#     --max_depth 60.0 --voxel_size 0.025 --iteration 1000
+# python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/planar_recon/pgsr_depth_normal \
+#     --max_depth 60.0 --voxel_size 0.025 --iteration 2000
+# python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/planar_recon/pgsr_depth_normal \
+#     --max_depth 60.0 --voxel_size 0.025 --iteration 3000
+
+
+
+
 python train.py -s /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/concave_recon/colmap \
-    -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/concave_recon/pgsr_depth_normal \
-    --max_abs_split_points 0 --opacity_cull_threshold 0.05 
+    -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/concave_recon/pgsr_depth_normal_refine \
+    --max_abs_split_points 0 --opacity_cull_threshold 0.05 --normal_scale 8.0
 python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/concave_recon/pgsr_depth_normal \
     --max_depth 60.0 --voxel_size 0.025 --iteration 1000
 python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/concave_recon/pgsr_depth_normal \
     --max_depth 60.0 --voxel_size 0.025 --iteration 2000
 python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/concave_recon/pgsr_depth_normal \
-    --max_depth 60.0 --voxel_size 0.025 --iteration 3000
-
-python train.py -s /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/convex_recon/colmap \
-    -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/convex_recon/pgsr_depth_normal \
-    --max_abs_split_points 0 --opacity_cull_threshold 0.05 
-python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/convex_recon/pgsr_depth_normal \
-    --max_depth 60.0 --voxel_size 0.025 --iteration 1000
-python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/convex_recon/pgsr_depth_normal \
-    --max_depth 60.0 --voxel_size 0.025 --iteration 2000
-python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/convex_recon/pgsr_depth_normal \
-    --max_depth 60.0 --voxel_size 0.025 --iteration 3000
-
-python train.py -s /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/planar_recon/colmap \
-    -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/planar_recon/pgsr_depth_normal \
-    --max_abs_split_points 0 --opacity_cull_threshold 0.05 
-python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/planar_recon/pgsr_depth_normal \
-    --max_depth 60.0 --voxel_size 0.025 --iteration 1000
-python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/planar_recon/pgsr_depth_normal \
-    --max_depth 60.0 --voxel_size 0.025 --iteration 2000
-python render.py -m /home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/planar_recon/pgsr_depth_normal \
     --max_depth 60.0 --voxel_size 0.025 --iteration 3000
