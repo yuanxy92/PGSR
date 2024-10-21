@@ -144,6 +144,8 @@ def render_set(model_path, name, iteration, views, scene, gaussians, pipeline, b
 
             ref_depth[ref_depth>max_depth] = 0
             ref_depth = ref_depth.detach().cpu().numpy()
+            from scipy.ndimage import median_filter
+            # ref_depth = median_filter(ref_depth, size=(11, 11))
             
             pose = np.identity(4)
             pose[:3,:3] = view.R.transpose(-1,-2)

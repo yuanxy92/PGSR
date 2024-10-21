@@ -3,7 +3,7 @@ iterations1=5000
 iterations2=3000
 voxel_size=0.8
 
-rootdir=/home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/concave_recon_smooth
+rootdir=/home/luvision/project/Code/data/Aurora/Fig_3/20240914_phone2/smooth/concave_recon
 python dust3r_depth_refine.py ${rootdir}
 python train.py -s ${rootdir}/colmap \
     -m ${rootdir}/pgsr_depth_normal \
