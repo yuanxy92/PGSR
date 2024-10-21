@@ -239,9 +239,9 @@ def refine_dust3r_depth_maps(datadir):
         cv2.imwrite(os.path.join(mono_depth_orig_folder, f'{basename}.png'), normalized_depth8U(depth_mono))
         cv2.imwrite(os.path.join(mono_depth_orig_folder, f'{basename}_fitscale.png'), normalized_depth8U(depth_fitscale))
         # guided filter
-        depth_refine = depth_filter_refine(depth_dust3r, depth_dust3r, fitler_flag = 1, radius = 50, ksize = 5)
+        # depth_refine = depth_filter_refine(depth_dust3r, depth_dust3r, fitler_flag = 1, radius = 50, ksize = 5)
         # depth_refine = depth_filter_refine(depth_dust3r, depth_mono, fitler_flag = 1, radius = 25, ksize = 3)
-        # depth_refine = depth_filter_refine(depth_dust3r, depth_fitscale, fitler_flag = 1)
+        depth_refine = depth_filter_refine(depth_dust3r, depth_fitscale, fitler_flag = 1)
         np.save(os.path.join(mono_depth_folder, basename), depth_refine)
         # save visualization results
         cv2.imwrite(os.path.join(mono_depth_folder, f'{basename}.png'), normalized_depth8U(depth_refine))
