@@ -27,6 +27,7 @@ import open3d as o3d
 from scene.app_model import AppModel
 import copy
 from collections import deque
+import re
 
 def clean_mesh(mesh, min_len=1000):
     with o3d.utility.VerbosityContextManager(o3d.utility.VerbosityLevel.Debug) as cm:
@@ -93,6 +94,13 @@ def render_set(model_path, name, iteration, views, scene, gaussians, pipeline, b
         normal = normal.detach().cpu().numpy()
         normal = ((normal+1) * 127.5).astype(np.uint8).clip(0, 255)
 
+        match = re.search(r"(.+)[/\\][^/\\]+$", view.image_name)
+        subfolder_name = match.group(1)
+        os.makedirs(os.path.join(gts_path, subfolder_name), exist_ok=True)
+        os.makedirs(os.path.join(render_path, subfolder_name), exist_ok=True)
+        os.makedirs(os.path.join(render_depth_path, subfolder_name), exist_ok=True)
+        os.makedirs(os.path.join(render_normal_path, subfolder_name), exist_ok=True)
+
         if name == 'test':
             torchvision.utils.save_image(gt.clamp(0.0, 1.0), os.path.join(gts_path, view.image_name + ".png"))
             torchvision.utils.save_image(rendering, os.path.join(render_path, view.image_name + ".png"))
@@ -135,7 +143,7 @@ def render_set(model_path, name, iteration, views, scene, gaussians, pipeline, b
                 pose)
 
 def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool,
-                 max_depth : float, voxel_size : float, num_cluster: int, use_depth_filter : bool):
+    max_depth : float, voxel_size : float, num_cluster: int, use_depth_filter : bool):
     with torch.no_grad():
         gaussians = GaussianModel(dataset.sh_degree)
         scene = Scene(dataset, gaussians, load_iteration=iteration, shuffle=False)
