@@ -114,7 +114,7 @@ np.save(os.path.join(f"/data/hdd/Data/SkinSight_video/UVC_cam_undis/pgsr/train/d
 
 # Calculate global min and max for the colormap
 min_depth = np.min(depth_images_all_views_stack)
-max_depth = 20
+max_depth = 20 - 1
 print(f'min depth: {min_depth}, max depth: {max_depth}')
 
 # fast bilateral filter
@@ -130,10 +130,12 @@ bs_params = {
     'cg_maxiter': 25 # The number of PCG iterations
 }
 
+depth_images_fbs_all_views = []
 for view_id in range(4):
     depth_rgb_frames = []
     rgb_frames = []
     depany_frames = []
+    depth_rgb_fbs = []
     depth_rgb_fbs_frames = []
     output_combine_video = f"/data/hdd/Data/SkinSight_video/UVC_cam_undis/pgsr/train/rgbdepth_video_view_{view_id}.mp4"      # Output video file
     output_fbs_combine_video = f"/data/hdd/Data/SkinSight_video/UVC_cam_undis/pgsr/train/rgbdepth_fbs_video_view_{view_id}.mp4"      # Output video file
@@ -156,17 +158,18 @@ for view_id in range(4):
         depany_frames.append(depany_frame)
 
         # apply fast bilateral solver
-        reference = depany_frame
-        target = normalized_depth_f
+        reference = np.copy(depany_frame)
+        target = np.copy(normalized_depth_f) * 255
         im_shape = reference.shape[:2]
-        confidence = np.ones(im_shape, np.float32)
+        confidence = np.ones(im_shape, np.float32) * 1.0
         grid = BilateralGrid(reference, **grid_params)
-        t = target.reshape(-1, 1).astype(np.double)
-        c = confidence.reshape(-1, 1).astype(np.double)
+        t = target.reshape(-1, 1).astype(np.double) / (pow(2,8)-1)
+        c = confidence.reshape(-1, 1).astype(np.double) / (pow(2,8)-1)
         tc_filt = grid.filter(t * c)
         c_filt = grid.filter(c)
         output_filter = (tc_filt / c_filt).reshape(im_shape)
         normalized_depth_fbs = BilateralSolver(grid, bs_params).solve(t, c).reshape(im_shape)
+        depth_rgb_fbs.append(normalized_depth_fbs / 255)
 
         # apply depth to color transform
         normalized_depth_fbs_8U = (normalized_depth_fbs * 255).astype(np.uint8)  # Scale to 0-255
@@ -177,17 +180,10 @@ for view_id in range(4):
             print(f'Finish depth image processing for view {view_id} and frame {i}')
 
     
+    depth_images_fbs_all_views.append(np.stack(depth_rgb_fbs, axis=-1))
+
     # Get frame size from the first image
     frame_height, frame_width, _ = depth_rgb_frames[0].shape
-
-    # # Write video using OpenCV (rgb and depth combined)
-    # fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    # video_writer = cv2.VideoWriter(output_combine_video, fourcc, fps, (frame_width * 2, frame_height))
-    # for frameidx in range(len(depth_rgb_frames)):
-    #     rgb_frame_ = rgb_frames[frameidx]
-    #     depth_frame_ = depth_rgb_frames[frameidx]
-    #     video_writer.write(cv2.hconcat([rgb_frame_, depth_frame_]))
-    # video_writer.release()
 
     # Write video using OpenCV (rgb and depth fbs combined)
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
@@ -200,3 +196,6 @@ for view_id in range(4):
     video_writer.release()
 
     print(f"Video saved to {output_combine_video} and {output_fbs_combine_video}")
+
+depth_images_fbs_all_views = np.stack(depth_images_fbs_all_views, axis=-1)
+np.save(os.path.join(f"/data/hdd/Data/SkinSight_video/UVC_cam_undis/pgsr/train/depth_fbs_all_views.npy"), depth_images_fbs_all_views)
