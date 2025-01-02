@@ -109,6 +109,8 @@ def render_set(model_path, name, iteration, views, scene, gaussians, pipeline, b
             cv2.imwrite(os.path.join(render_path, view.image_name + ".jpg"), rendering_np)
         cv2.imwrite(os.path.join(render_depth_path, view.image_name + ".jpg"), depth_color)
         cv2.imwrite(os.path.join(render_normal_path, view.image_name + ".jpg"), normal)
+        depth_float = depth_tsdf.clone().detach().cpu().numpy()
+        np.save(os.path.join(render_depth_path, view.image_name + ".npy"), depth_float)
 
         if use_depth_filter:
             view_dir = torch.nn.functional.normalize(view.get_rays(), p=2, dim=-1)
